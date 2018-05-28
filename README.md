@@ -3,6 +3,17 @@ Autoencoding beyond pixels using a learned similarity metric
 
 For this project, we are going to rebuild the model specified in the paper of Larsen et. al. (2016). (https://arxiv.org/pdf/1512.09300.pdf)
 
+## Dependencies
+
+* keras
+* numpy
+* Pillow
+* matplotlib
+
+## Dataset
+
+[CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) - Using aligned images and then resizing it to 64x64 pixels
+
 ## Overview
 
   In this method, a variational autoencoder (VAE) is combined with a Generative Adversarial Network (GAN) in order to learn a higher level image similarity metric instead of the traditional element-wise metric. The model is shown in Fig.1.
