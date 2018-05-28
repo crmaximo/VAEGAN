@@ -31,7 +31,7 @@ For this project, we are going to rebuild the model specified in the paper of La
 
 ## Results
 
-  We were able to generate faces from the noise. Some facial features like the eyes, nose, lips, and chin are easily distinguishable. However, the generated faces looks appears blurry, one of the possible cause might be in the encoder model and the lack of training time.
+  We were able to generate faces from the noise. Some facial features like the eyes, nose, lips, and chin are easily distinguishable. However, the generated faces appears blurry and noisy, one of the possible causes might be in the encoder model and the lack of training time.
 	
 
 ![results](images/results.PNG)
