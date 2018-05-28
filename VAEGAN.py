@@ -35,7 +35,7 @@ datasetlist = []
 for filename, properties in zip(filenames[:show_number], labels[:show_number]):
     image = Image.open(os.path.join(filename))
     image = image.resize([64, 64], Image.ANTIALIAS)
-    image = (np.array(image) - 127.5 / 127.5)
+    image = (np.asarray(image) - 127.5 / 127.5)
     #	image = plt.imread(image)
     #	plt.imshow(image)
     # plt.show()
@@ -43,7 +43,7 @@ for filename, properties in zip(filenames[:show_number], labels[:show_number]):
     print(filename)
     # print(properties)
 
-dataset = np.array(datasetlist)
+dataset = np.asarray(datasetlist)
 print(dataset.shape)
 
 def encoder(kernel, filter, rows, columns, channel):
