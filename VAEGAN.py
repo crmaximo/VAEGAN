@@ -29,13 +29,13 @@ assert len(filenames) == len(labels)
 # print(labels[:4])
 # print(filenames[:4])
 
-show_number = len(filenames)
+show_number = 1000#len(filenames)
 datasetlist = []
 # print(plaintext_labels)
 for filename, properties in zip(filenames[:show_number], labels[:show_number]):
     image = Image.open(os.path.join(filename))
     image = image.resize([64, 64], Image.ANTIALIAS)
-    image = (np.asarray(image) - 127.5 / 127.5)
+    image = (np.array(image) - 127.5 / 127.5)
     #	image = plt.imread(image)
     #	plt.imshow(image)
     # plt.show()
@@ -43,8 +43,15 @@ for filename, properties in zip(filenames[:show_number], labels[:show_number]):
     print(filename)
     # print(properties)
 
-dataset = np.asarray(datasetlist)
+dataset = np.array(datasetlist)
 print(dataset.shape)
+
+
+def sampling(args):
+    mean, logsigma = args
+    epsilon = K.random_normal(shape=(K.shape(mean)[0], 512), mean=0., stddev=1.0)
+    return mean + K.exp(logsigma / 2) * epsilon
+
 
 def encoder(kernel, filter, rows, columns, channel):
     X = Input(shape=(rows, columns, channel))
@@ -68,18 +75,18 @@ def encoder(kernel, filter, rows, columns, channel):
 
     mean = Dense(512)(model)
     logsigma = Dense(512, activation='tanh')(model)
-    meansigma = Model([X], [mean, logsigma])
+    latent = Lambda(sampling, output_shape=(512,))([mean, logsigma])
+    meansigma = Model([X], [mean, logsigma, latent])
     return meansigma
 
 
 def decgen(kernel, filter, rows, columns, channel):
-    X = Input(shape=(2048,))
+    X = Input(shape=(512,))
 
     model = Dense(filter*8*rows*columns)(X)
     model = Reshape((rows, columns, filter * 8))(model)
     model = BatchNormalization(epsilon=1e-5)(model)
     model = Activation('relu')(model)
-
 
     model = Conv2DTranspose(filters=filter*4, kernel_size=kernel, strides=2, padding='same')(model)
     model = BatchNormalization(epsilon=1e-5)(model)
@@ -138,7 +145,7 @@ SGDop = SGD(lr=0.0003)
 ADAMop = Adam(lr=0.0002)
 # encoder
 E = encoder(5, 32, rows, columns, channel)
-E.compile(optimizer='sgd', loss='mse')
+E.compile(optimizer=SGDop, loss='mse')
 E.summary()
 # generator/decoder
 G = decgen(5, 32, rows, columns, channel)
@@ -152,23 +159,23 @@ D_fixed = discriminator(5, 32, rows, columns, channel)
 D_fixed.compile(optimizer=SGDop, loss='mse')
 # VAE
 X = Input(shape=(rows, columns, channel))
-latent_rep = E(X)[0]
-output = G(latent_rep)
+# latent_rep = E(X)[0]
+# output = G(latent_rep)
+E_mean, E_logsigma, Z = E(X)
+
+# Z = Input(shape=(512,))
+# Z2 = Input(shape=(batch_size, 512))
+
+output = G(Z)
+G_dec = G(E_mean + E_logsigma)
+D_fake, F_fake = D(output)
+D_fromGen, F_fromGen = D(G_dec)
+D_true, F_true = D(X)
+
 VAE = Model(X, output)
-Img = D.input
-E_mean, E_logsigma = E(Img)
+kl = - 0.5 * K.sum(1 + E_logsigma - K.square(E_mean) - K.exp(E_logsigma), axis=-1)
 crossent = 64 * metrics.mse(K.flatten(X), K.flatten(output))
-Z = G.input
-Z2 = Input(512)
-Img = D.input
-G_train = G(Z)
-G_dec = G(E_mean + Z2 * E_logsigma)
-D_fake, F_fake = D(G_dec)
-D_true, F_true = D(Img)
-kl= - 0.5 * K.sum(1 + E_logsigma - K.square(E_mean) - K.exp(E_logsigma), axis=-1)
 VAEloss = K.mean(crossent + kl)
-
-
 VAE.add_loss(VAEloss)
 VAE.compile(optimizer=SGDop)
 
@@ -177,9 +184,9 @@ for epoch in range(epochs):
     encImg = G.predict(latent_vect)
     fakeImg = G.predict(noise)
 
-    DlossTrue = D.train_on_batch(dataset, np.ones((batch_size, 1)))
-    DlossEnc = D.train_on_batch(encImg, np.ones((batch_size, 1)))
-    DlossFake = D.train_on_batch(encImg, np.zeros((batch_size, 1)))
+    DlossTrue = D_true.train_on_batch(dataset, np.ones((batch_size, 1)))
+    DlossEnc = D_fromGen.train_on_batch(encImg, np.ones((batch_size, 1)))
+    DlossFake = D_fake.train_on_batch(fakeImg, np.zeros((batch_size, 1)))
 
     cnt = epoch
     while cnt > 3:
