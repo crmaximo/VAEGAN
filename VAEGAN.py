@@ -29,7 +29,7 @@ assert len(filenames) == len(labels)
 # print(labels[:4])
 # print(filenames[:4])
 
-show_number = 1000#len(filenames)
+show_number = len(filenames)
 datasetlist = []
 # print(plaintext_labels)
 for filename, properties in zip(filenames[:show_number], labels[:show_number]):
